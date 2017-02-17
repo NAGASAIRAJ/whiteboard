@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>HTML5 Canvas Drawing Board</title>
+	<style type="text/css">
+		* {
+			margin: 0;
+			padding: 0;
+		}
+		body, html {
+			height: 100%;
+		}
+		#myCanvas {
+			cursor: crosshair;
+		    position: fixed;
+		}
+	</style>
+</head>
+<body>
+<canvas id="myCanvas">
+	Sorry, your browser does not support HTML5 canvas technology.
+</canvas>
+
+<script type="text/JavaScript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js?ver=1.4.2"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.2/socket.io.min.js"></script>
+<script type="text/javascript">
+	var socket = io();
+	window.onload = function() {
+		var myCanvas = document.getElementById("myCanvas");
+		var ctx = myCanvas.getContext("2d");
+	    
+	    // Fill Window Width and Height
+	    myCanvas.width = window.innerWidth;
+		myCanvas.height = window.innerHeight;
+		
+		// Set Background Color
+	    ctx.fillStyle="#fff";
+	    ctx.fillRect(0,0,myCanvas.width,myCanvas.height);
+		
+	    // Mouse Event Handlers
+		if(myCanvas){
+			
+			var isDown = false;
+			var canvasX, canvasY;
+			var start_canvasX, start_canvasY;
+
+			ctx.lineWidth = 5;
+			
+			$(myCanvas)
+			.mousedown(function(e){
+				isDown = true;
+				
+				start_canvasX = e.pageX - myCanvas.offsetLeft;
+				start_canvasY = e.pageY - myCanvas.offsetTop;
+				
+				socket.emit('beginLineDraw', [start_canvasX, start_canvasY]);
+
+			})
+			.mousemove(function(e){
+				if(isDown !== false) {
+					canvasX = e.pageX - myCanvas.offsetLeft;
+					canvasY = e.pageY - myCanvas.offsetTop;
+					
+					socket.emit('line', [canvasX, canvasY]);
+					
+				}
+			})
+			.mouseup(function(e){
+				isDown = false;
+				socket.emit('closeSignal', true);
+				
+			});
+		
+			socket.on('beginLineDraw', function(line){
+				ctx.beginPath();
+				ctx.moveTo(line[0], line[1]);
+			});
+
+			socket.on('line', function(line){
+				ctx.lineTo(line[0], line[1]);
+				ctx.strokeStyle = "#000";
+				ctx.stroke();
+			});
+
+			socket.on('closeSignal', function(signal){
+				if (signal) {
+					console.log(signal);
+					ctx.closePath();
+				}
+			});
+
+		}
+
+// For Touch screens.
+/*
+		// Touch Events Handlers
+		draw = {
+			started: false,
+			start: function(evt) {
+
+				ctx.beginPath();
+				ctx.moveTo(
+					evt.touches[0].pageX,
+					evt.touches[0].pageY
+				);
+
+				this.started = true;
+
+			},
+			move: function(evt) {
+
+				if (this.started) {
+					ctx.lineTo(
+						evt.touches[0].pageX,
+						evt.touches[0].pageY
+					);
+
+					ctx.strokeStyle = "#000";
+					ctx.lineWidth = 5;
+					ctx.stroke();
+				}
+
+			},
+			end: function(evt) {
+				this.started = false;
+			}
+		};
+		
+		// Touch Events
+		myCanvas.addEventListener('touchstart', draw.start, false);
+		myCanvas.addEventListener('touchend', draw.end, false);
+		myCanvas.addEventListener('touchmove', draw.move, false);
+		
+		// Disable Page Move
+		document.body.addEventListener('touchmove',function(evt){
+			evt.preventDefault();
+		},false);
+
+		*/
+	};
+</script>
+
+</body>
+</html>
